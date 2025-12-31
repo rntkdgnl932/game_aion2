@@ -14,7 +14,7 @@ import sys
 import variable as v_
 
 sys.path.append('C:/my_games/' + str(v_.game_folder) + '/' + str(v_.data_folder) + '/mymodule')
-
+_SYNC_SER = None
 
 def go_test(cla):
     print('hi test!', cla)
@@ -809,6 +809,37 @@ def click_pos_abs(pos_1, pos_2, cla):
             pyautogui.click(pos_1, pos_2)
     except Exception as e:
         print(f"click_pos_abs Error: {e}")
+
+
+def mouse_down_abs(pos_1, pos_2, cla):
+    """지정한 절대 좌표에서 마우스 왼쪽 버튼을 누른 상태로 유지"""
+    import serial
+    import pyautogui
+    try:
+        pos_1, pos_2 = int(pos_1), int(pos_2)
+        pyautogui.moveTo(pos_1, pos_2) # 해당 위치로 이동
+
+        if v_.now_arduino == "on":
+            # 아두이노 모드: MD L (Mouse Down Left) 명령 전송
+            arduino_mousedown_left() # 기존 작성된 함수 활용
+        else:
+            # 일반 모드: pyautogui 활용
+            pyautogui.mouseDown(pos_1, pos_2, button='left')
+    except Exception as e:
+        print(f"mouse_down_abs Error: {e}")
+
+def mouse_up_abs(pos_1, pos_2, cla):
+    """마우스 왼쪽 버튼을 뗌"""
+    import serial
+    import pyautogui
+    try:
+        if v_.now_arduino == "on":
+            # 아두이노 모드: MU L (Mouse Up Left) 명령 전송
+            arduino_mouseup_left() # 기존 작성된 함수 활용
+        else:
+            pyautogui.mouseUp(button='left')
+    except Exception as e:
+        print(f"mouse_up_abs Error: {e}")
 
 def click_pos_reg(pos_1, pos_2, cla):
     import serial
@@ -2544,6 +2575,49 @@ def arduino_panic():
     except Exception:
         pass
 
+
+def sync_arduino_command(command):
+    """동기화 전용: 포트를 열어두고 명령만 전송"""
+    global _SYNC_SER
+    import serial
+    try:
+        if _SYNC_SER is None or not _SYNC_SER.is_open:
+            _SYNC_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.05)
+
+        _SYNC_SER.write(f"{command}\n".encode())
+    except Exception as e:
+        print(f"Sync Serial Error: {e}")
+        if _SYNC_SER:
+            _SYNC_SER.close()
+            _SYNC_SER = None
+
+
+def get_sync_ser():
+    """동기화 전용: 포트를 한 번만 열어서 계속 사용"""
+    global _SYNC_SER
+    import serial
+    if _SYNC_SER is None or not _SYNC_SER.is_open:
+        try:
+            # 타임아웃을 짧게 주어 반응 속도를 높입니다.
+            _SYNC_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
+        except Exception as e:
+            print(f"시리얼 포트 오픈 에러: {e}")
+            return None
+    return _SYNC_SER
+
+def arduino_key_down(key):
+    """아두이노에 키 누름 유지 명령 (연결 유지형)"""
+    ser = get_sync_ser()
+    if ser:
+        ser.write(f"KD {key.upper()}\n".encode())
+        print(f"Arduino Key Down: {key}")
+
+def arduino_key_up(key):
+    """아두이노에 키 뗌 명령 (연결 유지형)"""
+    ser = get_sync_ser()
+    if ser:
+        ser.write(f"KU {key.upper()}\n".encode())
+        print(f"Arduino Key Up: {key}")
 
 def hold_move_and_attack(move_key: str = "A", hold_ms: int = 140, attack_key: str = "r", attack_count: int = 1):
     """

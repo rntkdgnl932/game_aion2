@@ -42,7 +42,7 @@ import colorthief
 # from function import imgs_set, imgs_set_, click_pos_2, random_int, text_check_get_3, int_put_, text_check_get, \
 #     click_with_image, drag_pos, image_processing, get_region, click_pos_reg
 from function_game import imgs_set, imgs_set_, click_pos_2, random_int, text_check_get_3, int_put_, text_check_get, click_with_image, drag_pos, image_processing, get_region, click_pos_reg, win_left_move, win_right_move, click_pos_abs, arduino_press
-
+from function_game import mouse_up_abs, mouse_down_abs, arduino_key_up, arduino_key_down
 
 from massenger import line_monitor, line_to_me
 from schedule import myQuest_play_check, myQuest_play_add
@@ -58,6 +58,7 @@ import variable as v_
 
 sys.setrecursionlimit(10 ** 7)
 # pyqt5 관련###################################################
+_SYNC_SER = None
 rowcount = 0
 colcount = 0
 thisRow = 0
@@ -182,15 +183,24 @@ class MyApp(QDialog):
         self.show()
 
     def closeEvent(self, event):
-        """프로그램이 닫힐 때 자동으로 실행되는 함수"""
         try:
             import keyboard
-            keyboard.unhook_all()  # 등록된 모든 핫키 강제 해제
-            print("시스템: 프로그램 종료 감지 - 모든 핫키를 안전하게 해제했습니다.")
-        except Exception as e:
-            print(f"종료 처리 중 에러: {e}")
+            from function_game import arduino_panic, _SYNC_SER
 
-        event.accept()  # 종료 절차 승인
+            # 1. 키보드 감시(Hook) 즉시 해제
+            keyboard.unhook_all()
+
+            # 2. 열려있는 시리얼 포트 강제 종료
+            if _SYNC_SER and _SYNC_SER.is_open:
+                _SYNC_SER.close()
+
+            # 3. 아두이노 모든 입력 초기화 (무한 입력 방지)
+            arduino_panic()
+            print("프로그램이 안전하게 종료되었습니다.")
+        except Exception as e:
+            print(f"종료 처리 중 오류: {e}")
+
+        event.accept()  # 창 닫기 승인
 
     def my_title(self):
         self.setWindowTitle(v_.this_game + "(ver " + version + ")")
@@ -745,6 +755,13 @@ class FirstTab(QWidget):
     def __init__(self):
         super().__init__()
         self.hotkey_active = False  # 핫키 활성 상태 추적 변수
+        self.is_left_holding = False  # z 키 토글 상태 저장용
+
+        # --- 실시간 키 동기화 관련 변수 ---
+        self.is_sync_mode = False  # 동기화 모드 On/Off
+        self.pressed_keys = set()  # 현재 눌려있는 키 목록 (중복 전송 방지용)
+        self.target_keys = ['w', 'a', 's', 'f']  # 감시할 대상 키
+
         self.initUI()
         self.set_rand_int()
 
@@ -853,6 +870,10 @@ class FirstTab(QWidget):
         self.btn_keyboard_press = QPushButton("키보드 실행")
         self.btn_keyboard_press.clicked.connect(self.keyboard_press_action)
 
+        # --- 실시간 키 동기화 버튼 ---
+        self.btn_sync_move = QPushButton("이동키 동기화 시작")
+        self.btn_sync_move.clicked.connect(self.toggle_key_sync)
+
         # 서브 레이아웃 조립
         mouse_input_vbox = QVBoxLayout()
 
@@ -871,6 +892,7 @@ class FirstTab(QWidget):
         mouse_input_vbox.addWidget(self.btn_hotkey_start)
         mouse_input_vbox.addWidget(self.edit_keyboard_input)
         mouse_input_vbox.addWidget(self.btn_keyboard_press)
+        mouse_input_vbox.addWidget(self.btn_sync_move)
 
         self.perfect_pause = QPushButton('완전정지')
         self.perfect_pause.clicked.connect(self.moonlight_stop_perfect)
@@ -3280,31 +3302,51 @@ class FirstTab(QWidget):
         import keyboard
         try:
             if not self.hotkey_active:
-                # --- 핫키 시작 로직 ---
-                hk1 = self.edit_hotkey1.text().strip()
-                hk2 = self.edit_hotkey2.text().strip()
+                keyboard.unhook_all()
+                hk1 = self.edit_hotkey1.text().strip()  # 기본값 `
+                hk2 = self.edit_hotkey2.text().strip()  # 기본값 z
 
+                # 각 키별로 개별 핸들러 등록
                 if hk1:
-                    keyboard.add_hotkey(hk1, self.hotkey_trigger_action)
+                    keyboard.add_hotkey(hk1, self.action_normal_click)
                 if hk2:
-                    keyboard.add_hotkey(hk2, self.hotkey_trigger_action)
+                    keyboard.add_hotkey(hk2, self.action_toggle_hold)
 
                 self.hotkey_active = True
                 self.btn_hotkey_start.setText("핫키 중지 (STOP)")
-                self.btn_hotkey_start.setStyleSheet("background-color: #ff4d4d; color: white;")  # 빨간색으로 변경
-                print(f"핫키 감시 시작: {hk1}, {hk2}")
+                self.btn_hotkey_start.setStyleSheet("background-color: #ff4d4d; color: white;")
             else:
-                # --- 핫키 중지 로직 ---
-                keyboard.unhook_all()  # 모든 핫키 해제
+                keyboard.unhook_all()
+                self.is_left_holding = False  # 상태 초기화
                 self.hotkey_active = False
                 self.btn_hotkey_start.setText("핫키 감시 시작")
-                self.btn_hotkey_start.setStyleSheet("")  # 원래 스타일로 복구
-                print("핫키 감시가 중지되었습니다.")
-
+                self.btn_hotkey_start.setStyleSheet("")
         except Exception as e:
-            print(f"핫키 토글 에러: {e}")
+            print(f"Hotkey Error: {e}")
 
+    def action_normal_click(self):
+        """ ` 키: 일반 클릭 수행 """
+        curr_x, curr_y = pyautogui.position()
+        self.edit_mouse_x.setText(str(curr_x))
+        self.edit_mouse_y.setText(str(curr_y))
+        click_pos_abs(curr_x, curr_y, "one")
 
+    def action_toggle_hold(self):
+        """ z 키: 누르기/떼기 토글 수행 """
+        curr_x, curr_y = pyautogui.position()
+        self.edit_mouse_x.setText(str(curr_x))
+        self.edit_mouse_y.setText(str(curr_y))
+
+        if not self.is_left_holding:
+            # 처음 눌렀을 때: 누른 상태 유지
+            mouse_down_abs(curr_x, curr_y, "one")
+            self.is_left_holding = True
+            print("마우스 왼쪽 버튼 홀딩 시작")
+        else:
+            # 이미 누르고 있을 때 다시 누르면: 버튼 뗌
+            mouse_up_abs(curr_x, curr_y, "one")
+            self.is_left_holding = False
+            print("마우스 왼쪽 버튼 홀딩 해제")
 
     # 1. 핫키가 눌렸을 때 실행 (좌표를 읽어서 입력창에 넣고 클릭)
     def hotkey_trigger_action(self):
@@ -3608,13 +3650,48 @@ class FirstTab(QWidget):
             print(e)
             return 0
 
-    # def keyPressEvent(self, e):
-    #     if e.key() == Qt.Key_Escape:
-    #         self.close()
-    #     elif e.key() == Qt.Key_F:
-    #         self.showFullScreen()
-    #     elif e.key() == Qt.Key_N:
-    #         self.showNormal()
+    def toggle_key_sync(self):
+        import keyboard
+        from function_game import _SYNC_SER
+        if not self.is_sync_mode:
+            self.is_sync_mode = True
+            self.btn_sync_move.setText("동기화 중 (WASF)")
+            self.btn_sync_move.setStyleSheet("background-color: #4CAF50; color: white;")
+            keyboard.hook(self.on_key_event)
+        else:
+            self.is_sync_mode = False
+            keyboard.unhook(self.on_key_event)
+            self.btn_sync_move.setText("이동키 동기화 시작")
+            self.btn_sync_move.setStyleSheet("")
+
+            # 동기화 종료 시 포트 닫기 및 키 해제
+            for key in self.target_keys:
+                arduino_key_up(key)
+
+            global _SYNC_SER
+            if _SYNC_SER:
+                _SYNC_SER.close()
+                _SYNC_SER = None
+            self.pressed_keys.clear()
+
+    def on_key_event(self, event):
+        """키보드 이벤트를 분석하여 아두이노에 전달 (중복 이벤트 필터링)"""
+        key_name = event.name.lower()
+
+        if key_name in self.target_keys:
+            # 1. 키가 눌렸을 때 (down)
+            if event.event_type == 'down':
+                # '이미 눌려있는 상태' 목록에 없을 때만 딱 한 번 전송
+                if key_name not in self.pressed_keys:
+                    self.pressed_keys.add(key_name)
+                    arduino_key_down(key_name)
+
+            # 2. 키가 떼어졌을 때 (up)
+            elif event.event_type == 'up':
+                # '눌려있는 상태' 목록에 있을 때만 뗌 명령 전송
+                if key_name in self.pressed_keys:
+                    self.pressed_keys.discard(key_name)
+                    arduino_key_up(key_name)
 
 
 ###########BackGround(백그라운드) 관련############################nowtest
