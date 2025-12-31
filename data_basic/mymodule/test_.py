@@ -9,7 +9,7 @@ sys.path.append('C:/my_games/' + str(v_.game_folder) + '/' + str(v_.data_folder)
 
 import function_game as fg
 import traceback
-from function_game import click_pos_reg, imgs_set_
+from function_game import click_pos_reg, imgs_set_, click_pos_2
 
 def go_test():
     import numpy as np
@@ -41,6 +41,8 @@ def go_test():
     if imgs_ is not None and imgs_ != False:
         print("aion2_start_btn", imgs_)
         click_pos_reg(imgs_.x, imgs_.y, cla)
+    else:
+        click_pos_2(1854, 63, cla)
 
 def go_test_ex():
     import numpy as np
