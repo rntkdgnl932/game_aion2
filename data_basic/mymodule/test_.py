@@ -34,15 +34,7 @@ def go_test():
     elif cla == "six":
         plus = 960 * 5
 
-    full_path = "c:\\my_games\\game_aion2\\data_basic\\imgs\\check\\start\\aion2_start_btn.PNG"
-    img_array = np.fromfile(full_path, np.uint8)
-    img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-    imgs_ = imgs_set_(300, 500, 1920, 960, "one", img, 0.8)
-    if imgs_ is not None and imgs_ != False:
-        print("aion2_start_btn", imgs_)
-        click_pos_reg(imgs_.x, imgs_.y, cla)
-    else:
-        click_pos_2(1067, 633, cla)
+    jadong_start(cla)
 
 def go_test_ex():
     import numpy as np
