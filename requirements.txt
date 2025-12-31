@@ -1,0 +1,31 @@
+# Core
+numpy
+
+# UI
+PyQt5
+
+# Image / OCR
+opencv-python
+Pillow
+pytesseract
+
+# Automation / Input
+pyautogui
+pydirectinput
+pyperclip
+clipboard
+screeninfo
+
+requests
+
+# Colors
+colorthief
+
+# Serial
+pyserial
+
+# Git
+GitPython
+
+# Windows extras
+pywin32
