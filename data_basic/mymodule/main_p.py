@@ -180,6 +180,18 @@ class MyApp(QDialog):
 
         self.setGeometry(20 + x_reg, 200, 900, 700)
         self.show()
+
+    def closeEvent(self, event):
+        """프로그램이 닫힐 때 자동으로 실행되는 함수"""
+        try:
+            import keyboard
+            keyboard.unhook_all()  # 등록된 모든 핫키 강제 해제
+            print("시스템: 프로그램 종료 감지 - 모든 핫키를 안전하게 해제했습니다.")
+        except Exception as e:
+            print(f"종료 처리 중 에러: {e}")
+
+        event.accept()  # 종료 절차 승인
+
     def my_title(self):
         self.setWindowTitle(v_.this_game + "(ver " + version + ")")
 
@@ -732,6 +744,7 @@ class FirstTab(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.hotkey_active = False  # 핫키 활성 상태 추적 변수
         self.initUI()
         self.set_rand_int()
 
@@ -3263,25 +3276,35 @@ class FirstTab(QWidget):
             print(e)
             return 0
 
-
     def start_hotkey_listener(self):
+        import keyboard
         try:
-            # 기존 등록된 핫키 모두 제거 후 새로 등록
-            keyboard.unhook_all()
+            if not self.hotkey_active:
+                # --- 핫키 시작 로직 ---
+                hk1 = self.edit_hotkey1.text().strip()
+                hk2 = self.edit_hotkey2.text().strip()
 
-            hk1 = self.edit_hotkey1.text().strip()
-            hk2 = self.edit_hotkey2.text().strip()
+                if hk1:
+                    keyboard.add_hotkey(hk1, self.hotkey_trigger_action)
+                if hk2:
+                    keyboard.add_hotkey(hk2, self.hotkey_trigger_action)
 
-            if hk1:
-                keyboard.add_hotkey(hk1, self.hotkey_trigger_action)
-            if hk2:
-                keyboard.add_hotkey(hk2, self.hotkey_trigger_action)
+                self.hotkey_active = True
+                self.btn_hotkey_start.setText("핫키 중지 (STOP)")
+                self.btn_hotkey_start.setStyleSheet("background-color: #ff4d4d; color: white;")  # 빨간색으로 변경
+                print(f"핫키 감시 시작: {hk1}, {hk2}")
+            else:
+                # --- 핫키 중지 로직 ---
+                keyboard.unhook_all()  # 모든 핫키 해제
+                self.hotkey_active = False
+                self.btn_hotkey_start.setText("핫키 감시 시작")
+                self.btn_hotkey_start.setStyleSheet("")  # 원래 스타일로 복구
+                print("핫키 감시가 중지되었습니다.")
 
-            self.btn_hotkey_start.setText("핫키 작동 중...")
-            self.btn_hotkey_start.setStyleSheet("background-color: yellow")
-            print(f"핫키 등록 완료: {hk1}, {hk2}")
         except Exception as e:
-            print(f"핫키 등록 에러: {e}")
+            print(f"핫키 토글 에러: {e}")
+
+
 
     # 1. 핫키가 눌렸을 때 실행 (좌표를 읽어서 입력창에 넣고 클릭)
     def hotkey_trigger_action(self):
