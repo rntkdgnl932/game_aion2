@@ -14,7 +14,7 @@ from function_game import click_pos_reg, imgs_set_, click_pos_2
 def go_test():
     import numpy as np
     import cv2
-
+    from jadong import jadong_start
     print("test")
     cla = "one"
 
