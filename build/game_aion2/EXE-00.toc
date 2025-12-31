@@ -1,5 +1,5 @@
 ('C:\\my_games\\game_aion2\\build\\game_aion2\\game_aion2.exe',
- False,
+ True,
  False,
  True,
  ['C:\\my_games\\game_aion2\\icon.ico'],
@@ -74,8 +74,8 @@
  [],
  False,
  False,
- 1767198503,
- [('runw.exe',
-   'C:\\my_games\\game_aion2\\.venv\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
+ 1767199883,
+ [('run.exe',
+   'C:\\my_games\\game_aion2\\.venv\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
    'EXECUTABLE')],
  'C:\\Users\\구대표\\AppData\\Local\\Programs\\Python\\Python310\\python310.dll')

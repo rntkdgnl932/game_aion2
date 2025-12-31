@@ -10,7 +10,8 @@ sys.path.append('C:/my_games/' + str(v_.game_folder) + '/' + str(v_.data_folder)
 import function_game as fg
 import traceback
 from function_game import click_pos_reg, imgs_set_
-def go_test():
+
+def go_test_ex():
     import numpy as np
     import cv2
 
@@ -32,6 +33,37 @@ def go_test():
         plus = 960 * 4
     elif cla == "six":
         plus = 960 * 5
+
+def go_test_ex():
+    import numpy as np
+    import cv2
+
+    print("test")
+    cla = "one"
+
+    # (기존 스타일 유지) cla에 따른 plus는 imgs_set_ 내부에서 처리하는 구조면 불필요하지만,
+    # 사용자가 기존 로직을 유지하는 편이 안전해서 남겨둠.
+    plus = 0
+    if cla == "one":
+        plus = 0
+    elif cla == "two":
+        plus = 960
+    elif cla == "three":
+        plus = 960 * 2
+    elif cla == "four":
+        plus = 960 * 3
+    elif cla == "five":
+        plus = 960 * 4
+    elif cla == "six":
+        plus = 960 * 5
+
+    full_path = "c:\\my_games\\game_aion2\\data_basic\\imgs\\check\\start\\aion2_start_btn.PNG"
+    img_array = np.fromfile(full_path, np.uint8)
+    img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    imgs_ = imgs_set_(300, 500, 1920, 960, "one", img, 0.8)
+    if imgs_ is not None and imgs_ != False:
+        print("aion2_start_btn", imgs_)
+        click_pos_reg(imgs_.x, imgs_.y, cla)
 
     try:
         print("=== Arduino Leonardo Keyboard Test ===")
