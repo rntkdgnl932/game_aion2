@@ -761,6 +761,78 @@ def click_pos_2(pos_1, pos_2, cla):
         print("error:", e)
 
 
+def click_pos_abs(pos_1, pos_2, cla):
+    import serial
+    import pyautogui
+    try:
+        # 입력받은 좌표를 정수로 변환
+        pos_1 = int(pos_1)
+        pos_2 = int(pos_2)
+
+        # 절대 좌표이므로 cla에 따른 오프셋(coordinate)은 0으로 고정
+        coordinate = 0
+
+        # 해당 위치로 즉시 이동
+        pyautogui.moveTo(pos_1, pos_2)
+
+        if v_.now_arduino == "on":
+            arduino_port = v_.COM_
+            baudrate = v_.speed_
+
+            ser = serial.Serial(arduino_port, baudrate)
+
+            moveZ = 1
+            k_reg = v_.mouse_speed
+            c_reg = v_.mouse_pm
+
+            move_ = False
+            move_count = 0
+            while move_ is False:
+                move_count += 1
+                if move_count > v_.mouse_move_count:
+                    move_ = True
+
+                # 이동 시킬 포인트 계산
+                x_reg = pos_1 - pyautogui.position()[0]
+                y_reg = pos_2 - pyautogui.position()[1]
+
+                if -c_reg < x_reg < c_reg:
+                    moveX = x_reg
+                elif x_reg > 0:
+                    moveX = min(k_reg, x_reg)
+                else:
+                    moveX = max(-k_reg, x_reg)
+
+                if -c_reg < y_reg < c_reg:
+                    moveY = y_reg
+                elif y_reg > 0:
+                    moveY = min(k_reg, y_reg)
+                else:
+                    moveY = max(-k_reg, y_reg)
+
+                data = f'x = {moveX}, y = {moveY}, z = {moveZ}\n'
+                ser.write(data.encode())
+                ser.readline()  # ACK 대기
+
+                if -c_reg < moveX < c_reg and -c_reg < moveY < c_reg:
+                    if pyautogui.position()[1] >= 31:
+                        move_ = True
+                        # 마우스 왼쪽 버튼 클릭 전송 (다운->업)
+                        ser.write(f'x = 0, y = 0, z = 3\n'.encode())
+                        time.sleep(0.1)
+                        ser.write(f'x = 0, y = 0, z = 4\n'.encode())
+
+            ser.close()
+            QTest.qWait(10)
+        else:
+            # 아두이노 미사용 시 일반 클릭
+            pyautogui.click(pos_1, pos_2)
+
+        time.sleep(0.1)
+
+    except Exception as e:
+        print("click_pos_abs error:", e)
+
 def click_pos_reg(pos_1, pos_2, cla):
     import serial
     import pyautogui

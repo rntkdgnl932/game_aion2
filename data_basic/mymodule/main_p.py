@@ -41,7 +41,7 @@ import colorthief
 # 나의 모듈
 # from function import imgs_set, imgs_set_, click_pos_2, random_int, text_check_get_3, int_put_, text_check_get, \
 #     click_with_image, drag_pos, image_processing, get_region, click_pos_reg
-from function_game import imgs_set, imgs_set_, click_pos_2, random_int, text_check_get_3, int_put_, text_check_get, click_with_image, drag_pos, image_processing, get_region, click_pos_reg, win_left_move, win_right_move
+from function_game import imgs_set, imgs_set_, click_pos_2, random_int, text_check_get_3, int_put_, text_check_get, click_with_image, drag_pos, image_processing, get_region, click_pos_reg, win_left_move, win_right_move, click_pos_abs, arduino_press
 
 
 from massenger import line_monitor, line_to_me
@@ -810,6 +810,50 @@ class FirstTab(QWidget):
         # 테스트 버튼
         self.mytestin = QPushButton('테스뚜')
         self.mytestin.clicked.connect(self.mytestin_)
+
+        # --- 마우스 관련 위젯 (이전 단계 추가분) ---
+        self.edit_mouse_x = QLineEdit(self)
+        self.edit_mouse_x.setPlaceholderText("X 좌표")
+        self.edit_mouse_x.setFixedWidth(60)
+
+        self.edit_mouse_y = QLineEdit(self)
+        self.edit_mouse_y.setPlaceholderText("Y 좌표")
+        self.edit_mouse_y.setFixedWidth(60)
+
+        self.btn_mouse_click = QPushButton("마우스")
+        self.btn_mouse_click.clicked.connect(self.mouse_click_action)
+
+        # --- 새로 추가되는 키보드 입력 및 버튼 영역 ---
+        self.edit_keyboard_input = QLineEdit(self)
+        self.edit_keyboard_input.setPlaceholderText("키 입력 (예: a, F1, ENTER)")
+        self.edit_keyboard_input.setFixedWidth(125)  # 두 칸 너비에 맞춤
+
+        self.btn_keyboard_press = QPushButton("키보드")
+        self.btn_keyboard_press.clicked.connect(self.keyboard_press_action)
+
+        # 입력창과 버튼들을 수직으로 묶기 위한 서브 레이아웃 수정
+        mouse_input_vbox = QVBoxLayout()
+
+        # 마우스 좌표 행
+        mouse_coord_hbox = QHBoxLayout()
+        mouse_coord_hbox.addWidget(self.edit_mouse_x)
+        mouse_coord_hbox.addWidget(self.edit_mouse_y)
+
+        # -----------------------------------------------
+
+
+
+        # 입력창과 버튼을 수직으로 묶기 위한 서브 레이아웃
+        mouse_input_vbox = QVBoxLayout()
+        mouse_coord_hbox = QHBoxLayout()
+        mouse_coord_hbox.addWidget(self.edit_mouse_x)
+        mouse_coord_hbox.addWidget(self.edit_mouse_y)
+
+        mouse_input_vbox.addLayout(mouse_coord_hbox)
+        mouse_input_vbox.addWidget(self.btn_mouse_click)
+        mouse_input_vbox.addWidget(self.edit_keyboard_input)  # 키보드 입력창 추가
+        mouse_input_vbox.addWidget(self.btn_keyboard_press)  # 키보드 버튼 추가
+
         self.perfect_pause = QPushButton('완전정지')
         self.perfect_pause.clicked.connect(self.moonlight_stop_perfect)
         self.again_restart = QPushButton('업데이트')
@@ -1262,6 +1306,7 @@ class FirstTab(QWidget):
 
         hbox1 = QHBoxLayout()
         # hbox1.addWidget(self.setItems)
+        hbox1.addLayout(mouse_input_vbox)
         hbox1.addWidget(self.mytestin)
         hbox1.addWidget(self.perfect_pause)
         hbox1.addWidget(self.again_restart)
@@ -3212,6 +3257,51 @@ class FirstTab(QWidget):
             print(e)
             return 0
 
+    def mouse_click_action(self):
+        try:
+            x_val = self.edit_mouse_x.text()
+            y_val = self.edit_mouse_y.text()
+
+            if x_val.isdigit() and y_val.isdigit():
+                print(f"입력된 좌표로 이동 및 클릭 시도: X={x_val}, Y={y_val}")
+                # function_game에서 가져온 함수 호출
+                click_pos_abs(x_val, y_val, "one")
+            else:
+                pyautogui.alert(button='확인', text='좌표 칸에 숫자만 입력해 주세요.', title='입력 오류')
+        except Exception as e:
+            print("mouse_click_action error:", e)
+
+    def mouse_click_action(self):
+        try:
+            x_val = self.edit_mouse_x.text()
+            y_val = self.edit_mouse_y.text()
+
+            if x_val.isdigit() and y_val.isdigit():
+                print(f"입력된 좌표로 이동 및 클릭 시도: X={x_val}, Y={y_val}")
+                # function_game에서 가져온 함수 호출
+                click_pos_abs(x_val, y_val, "one")
+            else:
+                pyautogui.alert(button='확인', text='좌표 칸에 숫자만 입력해 주세요.', title='입력 오류')
+        except Exception as e:
+            print("mouse_click_action error:", e)
+
+    def keyboard_press_action(self):
+        try:
+
+            QTest.qWait(1500)
+
+            key_val = self.edit_keyboard_input.text().strip()
+
+            if key_val != "":
+                print(f"키보드 입력 시도: {key_val}")
+                # function_game의 arduino_press 호출
+                result = arduino_press(key_val)
+                if not result:
+                    print("키 입력 실패 (아두이노 연결 확인 필요)")
+            else:
+                pyautogui.alert(button='확인', text='입력창에 키(key)를 입력해 주세요.', title='입력 오류')
+        except Exception as e:
+            print("keyboard_press_action error:", e)
 
     def mySchedule_is(self):
         try:
@@ -3336,6 +3426,10 @@ class FirstTab(QWidget):
         except Exception as e:
             print(e)
             return 0
+
+
+
+
     def mySchedule_start1(self):
         try:
             self.sche_add1.setText("one 실행중")
