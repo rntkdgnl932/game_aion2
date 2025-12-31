@@ -42,7 +42,7 @@ def go_test():
         print("aion2_start_btn", imgs_)
         click_pos_reg(imgs_.x, imgs_.y, cla)
     else:
-        click_pos_2(1854, 63, cla)
+        click_pos_2(1067, 633, cla)
 
 def go_test_ex():
     import numpy as np
