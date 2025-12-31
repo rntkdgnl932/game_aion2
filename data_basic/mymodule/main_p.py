@@ -19,7 +19,7 @@ from datetime import date, timedelta
 import re
 import git
 from screeninfo import get_monitors
-
+import keyboard
 import cv2
 # print(cv2.__version__)
 # import matplotlib.pyplot as plt
@@ -811,48 +811,53 @@ class FirstTab(QWidget):
         self.mytestin = QPushButton('테스뚜')
         self.mytestin.clicked.connect(self.mytestin_)
 
-        # --- 마우스 관련 위젯 (이전 단계 추가분) ---
+        # --- 마우스 및 핫키 제어 위젯 정의 ---
         self.edit_mouse_x = QLineEdit(self)
-        self.edit_mouse_x.setPlaceholderText("X 좌표")
-        self.edit_mouse_x.setFixedWidth(60)
+        self.edit_mouse_x.setPlaceholderText("X")
+        self.edit_mouse_x.setFixedWidth(45)
 
         self.edit_mouse_y = QLineEdit(self)
-        self.edit_mouse_y.setPlaceholderText("Y 좌표")
-        self.edit_mouse_y.setFixedWidth(60)
+        self.edit_mouse_y.setPlaceholderText("Y")
+        self.edit_mouse_y.setFixedWidth(45)
 
-        self.btn_mouse_click = QPushButton("마우스")
-        self.btn_mouse_click.clicked.connect(self.mouse_click_action)
+        self.btn_mouse_manual = QPushButton("수동 클릭")
+        self.btn_mouse_manual.clicked.connect(self.mouse_click_action)
 
-        # --- 새로 추가되는 키보드 입력 및 버튼 영역 ---
+        self.edit_hotkey1 = QLineEdit(self)
+        self.edit_hotkey1.setText("`")
+        self.edit_hotkey1.setFixedWidth(45)
+
+        self.edit_hotkey2 = QLineEdit(self)
+        self.edit_hotkey2.setText("z")
+        self.edit_hotkey2.setFixedWidth(45)
+
+        self.btn_hotkey_start = QPushButton("핫키 감시 시작")
+        self.btn_hotkey_start.clicked.connect(self.start_hotkey_listener)
+
         self.edit_keyboard_input = QLineEdit(self)
-        self.edit_keyboard_input.setPlaceholderText("키 입력 (예: a, F1, ENTER)")
-        self.edit_keyboard_input.setFixedWidth(125)  # 두 칸 너비에 맞춤
+        self.edit_keyboard_input.setPlaceholderText("키보드 입력")
 
-        self.btn_keyboard_press = QPushButton("키보드")
+        self.btn_keyboard_press = QPushButton("키보드 실행")
         self.btn_keyboard_press.clicked.connect(self.keyboard_press_action)
 
-        # 입력창과 버튼들을 수직으로 묶기 위한 서브 레이아웃 수정
+        # 서브 레이아웃 조립
         mouse_input_vbox = QVBoxLayout()
 
-        # 마우스 좌표 행
-        mouse_coord_hbox = QHBoxLayout()
-        mouse_coord_hbox.addWidget(self.edit_mouse_x)
-        mouse_coord_hbox.addWidget(self.edit_mouse_y)
+        hbox_pos = QHBoxLayout()
+        hbox_pos.addWidget(self.edit_mouse_x)
+        hbox_pos.addWidget(self.edit_mouse_y)
+        hbox_pos.addWidget(self.btn_mouse_manual)
 
-        # -----------------------------------------------
+        hbox_hk = QHBoxLayout()
+        hbox_hk.addWidget(QLabel("핫키:"))
+        hbox_hk.addWidget(self.edit_hotkey1)
+        hbox_hk.addWidget(self.edit_hotkey2)
 
-
-
-        # 입력창과 버튼을 수직으로 묶기 위한 서브 레이아웃
-        mouse_input_vbox = QVBoxLayout()
-        mouse_coord_hbox = QHBoxLayout()
-        mouse_coord_hbox.addWidget(self.edit_mouse_x)
-        mouse_coord_hbox.addWidget(self.edit_mouse_y)
-
-        mouse_input_vbox.addLayout(mouse_coord_hbox)
-        mouse_input_vbox.addWidget(self.btn_mouse_click)
-        mouse_input_vbox.addWidget(self.edit_keyboard_input)  # 키보드 입력창 추가
-        mouse_input_vbox.addWidget(self.btn_keyboard_press)  # 키보드 버튼 추가
+        mouse_input_vbox.addLayout(hbox_pos)
+        mouse_input_vbox.addLayout(hbox_hk)
+        mouse_input_vbox.addWidget(self.btn_hotkey_start)
+        mouse_input_vbox.addWidget(self.edit_keyboard_input)
+        mouse_input_vbox.addWidget(self.btn_keyboard_press)
 
         self.perfect_pause = QPushButton('완전정지')
         self.perfect_pause.clicked.connect(self.moonlight_stop_perfect)
@@ -1386,6 +1391,7 @@ class FirstTab(QWidget):
         Vbox2.addLayout(dun_2_hbox)
         Vbox2.addLayout(dun_3_hbox)
         Vbox2.addLayout(hbox4)
+        Vbox2.addLayout(mouse_input_vbox)
 
         hbox2 = QHBoxLayout()
         hbox2.addLayout(first_vbox_1)
@@ -3257,33 +3263,45 @@ class FirstTab(QWidget):
             print(e)
             return 0
 
-    def mouse_click_action(self):
+
+    def start_hotkey_listener(self):
         try:
-            x_val = self.edit_mouse_x.text()
-            y_val = self.edit_mouse_y.text()
+            # 기존 등록된 핫키 모두 제거 후 새로 등록
+            keyboard.unhook_all()
 
-            if x_val.isdigit() and y_val.isdigit():
-                print(f"입력된 좌표로 이동 및 클릭 시도: X={x_val}, Y={y_val}")
-                # function_game에서 가져온 함수 호출
-                click_pos_abs(x_val, y_val, "one")
-            else:
-                pyautogui.alert(button='확인', text='좌표 칸에 숫자만 입력해 주세요.', title='입력 오류')
+            hk1 = self.edit_hotkey1.text().strip()
+            hk2 = self.edit_hotkey2.text().strip()
+
+            if hk1:
+                keyboard.add_hotkey(hk1, self.hotkey_trigger_action)
+            if hk2:
+                keyboard.add_hotkey(hk2, self.hotkey_trigger_action)
+
+            self.btn_hotkey_start.setText("핫키 작동 중...")
+            self.btn_hotkey_start.setStyleSheet("background-color: yellow")
+            print(f"핫키 등록 완료: {hk1}, {hk2}")
         except Exception as e:
-            print("mouse_click_action error:", e)
+            print(f"핫키 등록 에러: {e}")
 
+    # 1. 핫키가 눌렸을 때 실행 (좌표를 읽어서 입력창에 넣고 클릭)
+    def hotkey_trigger_action(self):
+        curr_x, curr_y = pyautogui.position()
+        self.edit_mouse_x.setText(str(curr_x))
+        self.edit_mouse_y.setText(str(curr_y))
+
+        # 읽어온 즉시 클릭 실행
+        click_pos_abs(curr_x, curr_y, "one")
+
+    # 2. '수동 클릭' 버튼 눌렀을 때 실행 (입력창에 있는 좌표로 클릭)
     def mouse_click_action(self):
-        try:
-            x_val = self.edit_mouse_x.text()
-            y_val = self.edit_mouse_y.text()
+        x_val = self.edit_mouse_x.text()
+        y_val = self.edit_mouse_y.text()
 
-            if x_val.isdigit() and y_val.isdigit():
-                print(f"입력된 좌표로 이동 및 클릭 시도: X={x_val}, Y={y_val}")
-                # function_game에서 가져온 함수 호출
-                click_pos_abs(x_val, y_val, "one")
-            else:
-                pyautogui.alert(button='확인', text='좌표 칸에 숫자만 입력해 주세요.', title='입력 오류')
-        except Exception as e:
-            print("mouse_click_action error:", e)
+        if x_val.isdigit() and y_val.isdigit():
+            # 입력창에 적힌 좌표로 클릭
+            click_pos_abs(x_val, y_val, "one")
+        else:
+            print("좌표값이 비어있거나 숫자가 아닙니다.")
 
     def keyboard_press_action(self):
         try:

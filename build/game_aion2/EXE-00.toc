@@ -74,7 +74,7 @@
  [],
  False,
  False,
- 1767199883,
+ 1767220893,
  [('run.exe',
    'C:\\my_games\\game_aion2\\.venv\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
    'EXECUTABLE')],
