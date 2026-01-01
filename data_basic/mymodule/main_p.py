@@ -24,7 +24,8 @@ import cv2
 # print(cv2.__version__)
 # import matplotlib.pyplot as plt
 from PIL import Image
-
+import keyboard
+from function_game import arduino_panic, _SHARED_SER
 import numpy
 # 패키지 다운 필요
 import pytesseract
@@ -185,8 +186,7 @@ class MyApp(QDialog):
     def closeEvent(self, event):
         """창이 닫힐 때 자동으로 호출되어 리소스를 정리합니다."""
         try:
-            import keyboard
-            from function_game import arduino_panic, _SHARED_SER
+
 
             # 1. 키보드 감시 해제
             keyboard.unhook_all()
