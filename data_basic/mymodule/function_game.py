@@ -2157,27 +2157,26 @@ _ARDUINO_SER = None  # (호환용) 더 이상 캐시로 쓰지 않음
 
 
 def _arduino_open_serial():
-    """Open serial connection to Arduino (per-call)."""
+    """포트를 새로 열지 않고, 기존에 열린 포트가 있다면 재사용함"""
+    global _SHARED_SER
     import serial
     import time
+    import variable as v_
 
-    port = getattr(v_, "COM_", None)
-    baud = getattr(v_, "speed_", 9600)
+    # 이미 포트가 열려 있고 정상이라면 그대로 반환
+    if _SHARED_SER is not None and _SHARED_SER.is_open:
+        return _SHARED_SER
 
-    if not port:
-        raise RuntimeError("variable.COM_ is empty. Set v_.COM_ to the Arduino COM port (e.g., 'COM3').")
-
-    ser = serial.Serial(port, baudrate=baud, timeout=0.6, write_timeout=0.6)
-    # Leonardo는 open 시 리셋될 수 있으나, 매 호출마다 긴 대기는 느려짐
-    time.sleep(0.05)
-
+    # 포트가 없거나 닫힌 경우에만 새로 연결 시도
     try:
-        ser.reset_input_buffer()
-        ser.reset_output_buffer()
-    except Exception:
-        pass
-
-    return ser
+        # v_.COM_과 v_.speed_ 값을 사용
+        _SHARED_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
+        time.sleep(1.0) # 아두이노 부팅 대기
+        print(f"시스템: 아두이노 {v_.COM_} 연결 성공")
+        return _SHARED_SER
+    except Exception as e:
+        print(f"시리얼 오픈 에러: {e}")
+        return None
 
 
 def _arduino_close_serial(ser=None):
@@ -2189,17 +2188,18 @@ def _arduino_close_serial(ser=None):
         pass
 
 
-def _arduino_write_line(line: str):
-    """Write one protocol line to Arduino (open/write/close)."""
-    if not line.endswith("\n"):
-        line += "\n"
-
-    ser = None
+def _arduino_write_line(line):
+    """모든 아두이노 명령 전송의 단일 통로"""
     try:
         ser = _arduino_open_serial()
-        ser.write(line.encode("utf-8", errors="ignore"))
-    finally:
-        _arduino_close_serial(ser)
+        if ser:
+            if not line.endswith('\n'):
+                line += '\n'
+            ser.write(line.encode())
+    except Exception as e:
+        print(f"명령 전송 중 오류: {e}")
+        global _SHARED_SER
+        _SHARED_SER = None # 에러 발생 시 초기화하여 다음 호출 때 재연결 유도
 
 
 def _arduino_try_readline(max_wait_sec: float = 0.8) -> str:
