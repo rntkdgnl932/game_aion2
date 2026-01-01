@@ -2364,22 +2364,13 @@ def arduino_mouseclick_left() -> bool:
         return False
 
 
-def arduino_mousedown_left() -> bool:
-    try:
-        _arduino_write_line("MD L")
-        return True
-    except Exception as e:
-        print(e)
-        return False
+def arduino_mousedown_left():
+    """마우스 왼쪽 버튼 누르기 (홀딩 시작)"""
+    send_arduino_cmd("x = 0, y = 0, z = 3")
 
-
-def arduino_mouseup_left() -> bool:
-    try:
-        _arduino_write_line("MU L")
-        return True
-    except Exception as e:
-        print(e)
-        return False
+def arduino_mouseup_left():
+    """마우스 왼쪽 버튼 떼기 (홀딩 해제)"""
+    send_arduino_cmd("x = 0, y = 0, z = 4")
 
 
 def arduino_click():
@@ -2557,35 +2548,44 @@ def get_sync_ser():
 # 파일 최상단 전역 변수 영역
 _SHARED_SER = None
 
+
 def get_arduino_ser():
+    """모든 기능이 공유하는 단일 시리얼 객체 반환 (싱글톤 패턴)"""
     global _SHARED_SER
     import serial
+    import variable as v_
+    import time
+
+    # 포트가 없거나 닫혀있을 때만 새로 생성
     if _SHARED_SER is None or not _SHARED_SER.is_open:
         try:
-            # 보드레이트를 115200으로 높이면 반응 속도가 훨씬 빨라집니다 (아두이노 코드와 일치 필요)
+            # 9600보다 빠른 115200 권장 (아두이노 소스도 수정 필요)
             _SHARED_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
-            time.sleep(1.0)
+            time.sleep(1.0)  # 아두이노 리셋 대기 시간 필수
+            print(f"시스템: 아두이노 연결 성공 ({v_.COM_})")
         except Exception as e:
-            print(f"연결 실패: {e}")
+            print(f"시리얼 연결 실패: {e}")
             return None
     return _SHARED_SER
 
+
 def send_arduino_cmd(cmd):
+    """모든 아두이노 명령(마우스/키보드)을 이 함수로 통합 전송"""
     ser = get_arduino_ser()
     if ser:
         try:
+            # 명령어 끝에 개행문자(\n)가 있어야 아두이노가 인식함
             ser.write(f"{cmd}\n".encode())
         except Exception as e:
-            print(f"전송 에러: {e}")
+            print(f"명령 전송 실패: {e}")
+            global _SHARED_SER
+            _SHARED_SER = None  # 에러 발생 시 초기화하여 다음 호출 때 재연결 유도
 
 def arduino_key_down(key):
     send_arduino_cmd(f"KD {key.upper()}")
 
 def arduino_key_up(key):
     send_arduino_cmd(f"KU {key.upper()}")
-
-def arduino_panic():
-    send_arduino_cmd("PANIC")
 
 def arduino_panic():
     """모든 키/마우스 입력 강제 해제"""
