@@ -3657,7 +3657,7 @@ class FirstTab(QWidget):
             self.is_sync_mode = True
             self.btn_sync_move.setText("동기화 중 (WASF)")
             self.btn_sync_move.setStyleSheet("background-color: #4CAF50; color: white;")
-            keyboard.hook(self.on_key_event)
+            keyboard.hook(self.on_key_event, suppress=True)
         else:
             self.is_sync_mode = False
             keyboard.unhook(self.on_key_event)
