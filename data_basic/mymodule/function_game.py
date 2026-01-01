@@ -2355,12 +2355,13 @@ def hold_key_ms(key: str, ms: int):
 
 
 def arduino_mouseclick_left() -> bool:
-    """Mouse click left without moving."""
+    """통합된 시리얼 통로를 사용하여 이동 없이 좌클릭 실행"""
     try:
-        _arduino_write_line("MC L")
+        # _arduino_write_line 대신 통합 전송 함수 사용
+        send_arduino_cmd("MC L")
         return True
     except Exception as e:
-        print(e)
+        print(f"좌클릭 에러: {e}")
         return False
 
 
@@ -2372,25 +2373,123 @@ def arduino_mouseup_left():
     """마우스 왼쪽 버튼 떼기 (홀딩 해제)"""
     send_arduino_cmd("x = 0, y = 0, z = 4")
 
+def arduino_right_click():
+    """아두이노를 이용한 마우스 오른쪽 클릭 실행 (단일 명령 통합)"""
+    try:
+        # z=5, z=6을 나누어 보내는 대신 MC R 명령 한 번으로 처리
+        send_arduino_cmd("MC R")
+        print("Arduino: 마우스 오른쪽 클릭 실행 (MC R)")
+    except Exception as e:
+        print(f"arduino_right_click Error: {e}")
+
+def arduino_right_down():
+    """오른쪽 버튼 누르기"""
+    send_arduino_cmd("x = 0, y = 0, z = 5")
+
+def arduino_right_up():
+    """오른쪽 버튼 떼기"""
+    send_arduino_cmd("x = 0, y = 0, z = 6")
 
 def arduino_click():
     """(호환) 이동 없이 좌클릭 1회."""
     return arduino_mouseclick_left()
 
 
-def arduino_keyboard_selftest(delay_sec: float = 0.7) -> None:
-    """Minimal manual self-test."""
+
+def sync_arduino_command(command):
+    """동기화 전용: 포트를 열어두고 명령만 전송"""
+    global _SYNC_SER
+    import serial
+    try:
+        if _SYNC_SER is None or not _SYNC_SER.is_open:
+            _SYNC_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.05)
+
+        _SYNC_SER.write(f"{command}\n".encode())
+    except Exception as e:
+        print(f"Sync Serial Error: {e}")
+        if _SYNC_SER:
+            _SYNC_SER.close()
+            _SYNC_SER = None
+
+
+def get_sync_ser():
+    """동기화 전용: 포트를 한 번만 열어서 계속 사용"""
+    global _SYNC_SER
+    import serial
+    if _SYNC_SER is None or not _SYNC_SER.is_open:
+        try:
+            # 타임아웃을 짧게 주어 반응 속도를 높입니다.
+            _SYNC_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
+        except Exception as e:
+            print(f"시리얼 포트 오픈 에러: {e}")
+            return None
+    return _SYNC_SER
+
+
+# 파일 최상단 전역 변수 영역
+_SHARED_SER = None
+
+
+def get_arduino_ser():
+    """모든 기능이 공유하는 단일 시리얼 객체 반환 (싱글톤 패턴)"""
+    global _SHARED_SER
+    import serial
+    import variable as v_
     import time
-    print("[arduino] selftest start")
-    arduino_text("abc")
-    time.sleep(delay_sec)
-    arduino_key("ALT+1")
-    time.sleep(delay_sec)
-    arduino_key("CTRL+C")
-    time.sleep(delay_sec)
-    arduino_key("TAB")
-    time.sleep(delay_sec)
-    print("[arduino] selftest end")
+
+    # 포트가 없거나 닫혀있을 때만 새로 생성
+    if _SHARED_SER is None or not _SHARED_SER.is_open:
+        try:
+            # 9600보다 빠른 115200 권장 (아두이노 소스도 수정 필요)
+            _SHARED_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
+            time.sleep(1.0)  # 아두이노 리셋 대기 시간 필수
+            print(f"시스템: 아두이노 연결 성공 ({v_.COM_})")
+        except Exception as e:
+            print(f"시리얼 연결 실패: {e}")
+            return None
+    return _SHARED_SER
+
+
+def send_arduino_cmd(cmd):
+    """모든 아두이노 명령(마우스/키보드)을 이 함수로 통합 전송"""
+    ser = get_arduino_ser()
+    if ser:
+        try:
+            # 명령어 끝에 개행문자(\n)가 있어야 아두이노가 인식함
+            ser.write(f"{cmd}\n".encode())
+        except Exception as e:
+            print(f"명령 전송 실패: {e}")
+            global _SHARED_SER
+            _SHARED_SER = None  # 에러 발생 시 초기화하여 다음 호출 때 재연결 유도
+
+def arduino_key_down(key):
+    send_arduino_cmd(f"KD {key.upper()}")
+
+def arduino_key_up(key):
+    send_arduino_cmd(f"KU {key.upper()}")
+
+def arduino_panic():
+    """모든 키/마우스 입력 강제 해제"""
+    send_arduino_cmd("PANIC")
+
+def click_pos_abs(pos_1, pos_2, click):
+    """공유 시리얼을 사용하여 절대 좌표 클릭"""
+    import pyautogui
+    try:
+        pos_1, pos_2 = int(pos_1), int(pos_2)
+        if v_.now_arduino == "on":
+            # 1. 이동 명령 (Z=1: 이동)
+            send_arduino_cmd(f"x = {pos_1 - pyautogui.position()[0]}, y = {pos_2 - pyautogui.position()[1]}, z = 1")
+            time.sleep(0.05)
+            # 2. 클릭 명령 (Z=3: Down, Z=4: Up)
+            if click == "left":
+                arduino_mouseclick_left()
+            elif click == "right":
+                arduino_right_click()
+        else:
+            pyautogui.click(pos_1, pos_2)
+    except Exception as e:
+        print(f"click_pos_abs Error: {e}")
 
 
 # ============================================================
@@ -2512,102 +2611,6 @@ class MicroStepper:
                 self._drift_fb += 0
 
         self._arm_cooldown()
-
-
-
-def sync_arduino_command(command):
-    """동기화 전용: 포트를 열어두고 명령만 전송"""
-    global _SYNC_SER
-    import serial
-    try:
-        if _SYNC_SER is None or not _SYNC_SER.is_open:
-            _SYNC_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.05)
-
-        _SYNC_SER.write(f"{command}\n".encode())
-    except Exception as e:
-        print(f"Sync Serial Error: {e}")
-        if _SYNC_SER:
-            _SYNC_SER.close()
-            _SYNC_SER = None
-
-
-def get_sync_ser():
-    """동기화 전용: 포트를 한 번만 열어서 계속 사용"""
-    global _SYNC_SER
-    import serial
-    if _SYNC_SER is None or not _SYNC_SER.is_open:
-        try:
-            # 타임아웃을 짧게 주어 반응 속도를 높입니다.
-            _SYNC_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
-        except Exception as e:
-            print(f"시리얼 포트 오픈 에러: {e}")
-            return None
-    return _SYNC_SER
-
-
-# 파일 최상단 전역 변수 영역
-_SHARED_SER = None
-
-
-def get_arduino_ser():
-    """모든 기능이 공유하는 단일 시리얼 객체 반환 (싱글톤 패턴)"""
-    global _SHARED_SER
-    import serial
-    import variable as v_
-    import time
-
-    # 포트가 없거나 닫혀있을 때만 새로 생성
-    if _SHARED_SER is None or not _SHARED_SER.is_open:
-        try:
-            # 9600보다 빠른 115200 권장 (아두이노 소스도 수정 필요)
-            _SHARED_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
-            time.sleep(1.0)  # 아두이노 리셋 대기 시간 필수
-            print(f"시스템: 아두이노 연결 성공 ({v_.COM_})")
-        except Exception as e:
-            print(f"시리얼 연결 실패: {e}")
-            return None
-    return _SHARED_SER
-
-
-def send_arduino_cmd(cmd):
-    """모든 아두이노 명령(마우스/키보드)을 이 함수로 통합 전송"""
-    ser = get_arduino_ser()
-    if ser:
-        try:
-            # 명령어 끝에 개행문자(\n)가 있어야 아두이노가 인식함
-            ser.write(f"{cmd}\n".encode())
-        except Exception as e:
-            print(f"명령 전송 실패: {e}")
-            global _SHARED_SER
-            _SHARED_SER = None  # 에러 발생 시 초기화하여 다음 호출 때 재연결 유도
-
-def arduino_key_down(key):
-    send_arduino_cmd(f"KD {key.upper()}")
-
-def arduino_key_up(key):
-    send_arduino_cmd(f"KU {key.upper()}")
-
-def arduino_panic():
-    """모든 키/마우스 입력 강제 해제"""
-    send_arduino_cmd("PANIC")
-
-def click_pos_abs(pos_1, pos_2, cla):
-    """공유 시리얼을 사용하여 절대 좌표 클릭"""
-    import pyautogui
-    try:
-        pos_1, pos_2 = int(pos_1), int(pos_2)
-        if v_.now_arduino == "on":
-            # 1. 이동 명령 (Z=1: 이동)
-            send_arduino_cmd(f"x = {pos_1 - pyautogui.position()[0]}, y = {pos_2 - pyautogui.position()[1]}, z = 1")
-            time.sleep(0.05)
-            # 2. 클릭 명령 (Z=3: Down, Z=4: Up)
-            send_arduino_cmd("x = 0, y = 0, z = 3")
-            time.sleep(0.05)
-            send_arduino_cmd("x = 0, y = 0, z = 4")
-        else:
-            pyautogui.click(pos_1, pos_2)
-    except Exception as e:
-        print(f"click_pos_abs Error: {e}")
 
 def hold_move_and_attack(move_key: str = "A", hold_ms: int = 140, attack_key: str = "r", attack_count: int = 1):
     """

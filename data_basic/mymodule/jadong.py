@@ -49,8 +49,11 @@ def jadong_test(cla):
 
 
     try:
-        print("=== Arduino Leonardo Keyboard Test ===")
-        QTest.qWait(300)
+        print("=== 3초 후 시작 ===")
+        QTest.qWait(1000)
+        for i in range(3):
+            print(str(i + 1), "초")
+            QTest.qWait(1000)
 
         # 사람처럼 보이게 하는 '왕복' 스텝(제자리 복귀)
         stepper = fg.MicroStepper(

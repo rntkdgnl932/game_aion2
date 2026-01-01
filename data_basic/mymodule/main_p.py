@@ -862,6 +862,10 @@ class FirstTab(QWidget):
         self.edit_hotkey2.setText("z")
         self.edit_hotkey2.setFixedWidth(45)
 
+        self.edit_hotkey3 = QLineEdit(self)
+        self.edit_hotkey3.setText("b")
+        self.edit_hotkey3.setFixedWidth(45)
+
         self.btn_hotkey_start = QPushButton("핫키 감시 시작")
         self.btn_hotkey_start.clicked.connect(self.start_hotkey_listener)
 
@@ -887,6 +891,7 @@ class FirstTab(QWidget):
         hbox_hk.addWidget(QLabel("핫키:"))
         hbox_hk.addWidget(self.edit_hotkey1)
         hbox_hk.addWidget(self.edit_hotkey2)
+        hbox_hk.addWidget(self.edit_hotkey3)
 
         mouse_input_vbox.addLayout(hbox_pos)
         mouse_input_vbox.addLayout(hbox_hk)
@@ -3306,12 +3311,15 @@ class FirstTab(QWidget):
                 keyboard.unhook_all()
                 hk1 = self.edit_hotkey1.text().strip()  # 기본값 `
                 hk2 = self.edit_hotkey2.text().strip()  # 기본값 z
+                hk3 = self.edit_hotkey3.text().strip()  # 기본값 b
 
                 # 각 키별로 개별 핸들러 등록
                 if hk1:
                     keyboard.add_hotkey(hk1, self.action_normal_click)
                 if hk2:
                     keyboard.add_hotkey(hk2, self.action_toggle_hold)
+                if hk3:
+                    keyboard.add_hotkey(hk3, self.action_right_click)
 
                 self.hotkey_active = True
                 self.btn_hotkey_start.setText("핫키 중지 (STOP)")
@@ -3330,7 +3338,7 @@ class FirstTab(QWidget):
         curr_x, curr_y = pyautogui.position()
         self.edit_mouse_x.setText(str(curr_x))
         self.edit_mouse_y.setText(str(curr_y))
-        click_pos_abs(curr_x, curr_y, "one")
+        click_pos_abs(curr_x, curr_y, "left")
 
     def action_toggle_hold(self):
         """ z 키: 누르기/떼기 토글 수행 """
@@ -3349,23 +3357,22 @@ class FirstTab(QWidget):
             self.is_left_holding = False
             print("마우스 왼쪽 버튼 홀딩 해제")
 
-    # 1. 핫키가 눌렸을 때 실행 (좌표를 읽어서 입력창에 넣고 클릭)
-    def hotkey_trigger_action(self):
+    def action_right_click(self):
+        """ b 키: 일반 클릭 수행 """
         curr_x, curr_y = pyautogui.position()
         self.edit_mouse_x.setText(str(curr_x))
         self.edit_mouse_y.setText(str(curr_y))
+        click_pos_abs(curr_x, curr_y, "right")
 
-        # 읽어온 즉시 클릭 실행
-        click_pos_abs(curr_x, curr_y, "one")
 
-    # 2. '수동 클릭' 버튼 눌렀을 때 실행 (입력창에 있는 좌표로 클릭)
+    # '수동 클릭' 버튼 눌렀을 때 실행 (입력창에 있는 좌표로 클릭)
     def mouse_click_action(self):
         x_val = self.edit_mouse_x.text()
         y_val = self.edit_mouse_y.text()
 
         if x_val.isdigit() and y_val.isdigit():
             # 입력창에 적힌 좌표로 클릭
-            click_pos_abs(x_val, y_val, "one")
+            click_pos_abs(x_val, y_val, "left")
         else:
             print("좌표값이 비어있거나 숫자가 아닙니다.")
 
