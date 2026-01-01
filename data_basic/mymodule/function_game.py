@@ -15,7 +15,8 @@ import variable as v_
 
 sys.path.append('C:/my_games/' + str(v_.game_folder) + '/' + str(v_.data_folder) + '/mymodule')
 _SYNC_SER = None
-
+# 파일 최상단 또는 전역 변수 영역
+_SHARED_SER = None
 def go_test(cla):
     print('hi test!', cla)
 
@@ -761,54 +762,7 @@ def click_pos_2(pos_1, pos_2, cla):
         print("error:", e)
 
 
-def click_pos_abs(pos_1, pos_2, cla):
-    import serial
-    import pyautogui
-    import time
-    try:
-        pos_1 = int(pos_1)
-        pos_2 = int(pos_2)
-        coordinate = 0 # 절대 좌표 사용
 
-        if v_.now_arduino == "on":
-            arduino_port = v_.COM_
-            baudrate = v_.speed_
-            ser = serial.Serial(arduino_port, baudrate)
-
-            moveZ = 1 # 이동 모드
-            k_reg = v_.mouse_speed
-            c_reg = v_.mouse_pm
-
-            move_ = False
-            move_count = 0
-            while move_ is False:
-                move_count += 1
-                if move_count > v_.mouse_move_count:
-                    move_ = True
-
-                x_reg = pos_1 - pyautogui.position()[0]
-                y_reg = pos_2 - pyautogui.position()[1]
-
-                # 이동량 계산 로직
-                moveX = x_reg if -c_reg < x_reg < c_reg else (min(k_reg, x_reg) if x_reg > 0 else max(-k_reg, x_reg))
-                moveY = y_reg if -c_reg < y_reg < c_reg else (min(k_reg, y_reg) if y_reg > 0 else max(-k_reg, y_reg))
-
-                data = f'x = {moveX}, y = {moveY}, z = {moveZ}\n'
-                ser.write(data.encode())
-                ser.readline()
-
-                if -c_reg < moveX < c_reg and -c_reg < moveY < c_reg:
-                    if pyautogui.position()[1] >= 31:
-                        move_ = True
-                        # 마우스 클릭 (Down -> Up)
-                        ser.write(f'x = 0, y = 0, z = 3\n'.encode()) # Down
-                        time.sleep(0.1)
-                        ser.write(f'x = 0, y = 0, z = 4\n'.encode()) # Up
-            ser.close()
-        else:
-            pyautogui.click(pos_1, pos_2)
-    except Exception as e:
-        print(f"click_pos_abs Error: {e}")
 
 
 def mouse_down_abs(pos_1, pos_2, cla):
@@ -2605,19 +2559,53 @@ def get_sync_ser():
             return None
     return _SYNC_SER
 
-def arduino_key_down(key):
-    """아두이노에 키 누름 유지 명령 (연결 유지형)"""
-    ser = get_sync_ser()
+
+def get_arduino_ser():
+    """모든 아두이노 명령이 공유하는 단일 시리얼 연결 반환"""
+    global _SHARED_SER
+    import serial
+    if _SHARED_SER is None or not _SHARED_SER.is_open:
+        try:
+            # 9600보다 빠른 반응을 원하시면 115200 권장 (아두이노 코드와 일치 필요)
+            _SHARED_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
+            time.sleep(0.1) # 연결 안정화 대기
+        except Exception as e:
+            print(f"시리얼 포트 연결 실패: {e}")
+            return None
+    return _SHARED_SER
+
+def send_arduino_cmd(cmd):
+    """공유 포트를 통해 아두이노 명령 전송"""
+    ser = get_arduino_ser()
     if ser:
-        ser.write(f"KD {key.upper()}\n".encode())
-        print(f"Arduino Key Down: {key}")
+        try:
+            ser.write(f"{cmd}\n".encode())
+        except Exception as e:
+            print(f"명령 전송 에러 ({cmd}): {e}")
+
+def arduino_key_down(key):
+    send_arduino_cmd(f"KD {key.upper()}")
 
 def arduino_key_up(key):
-    """아두이노에 키 뗌 명령 (연결 유지형)"""
-    ser = get_sync_ser()
-    if ser:
-        ser.write(f"KU {key.upper()}\n".encode())
-        print(f"Arduino Key Up: {key}")
+    send_arduino_cmd(f"KU {key.upper()}")
+
+def click_pos_abs(pos_1, pos_2, cla):
+    """공유 시리얼을 사용하여 절대 좌표 클릭"""
+    import pyautogui
+    try:
+        pos_1, pos_2 = int(pos_1), int(pos_2)
+        if v_.now_arduino == "on":
+            # 1. 이동 명령 (Z=1: 이동)
+            send_arduino_cmd(f"x = {pos_1 - pyautogui.position()[0]}, y = {pos_2 - pyautogui.position()[1]}, z = 1")
+            time.sleep(0.05)
+            # 2. 클릭 명령 (Z=3: Down, Z=4: Up)
+            send_arduino_cmd("x = 0, y = 0, z = 3")
+            time.sleep(0.05)
+            send_arduino_cmd("x = 0, y = 0, z = 4")
+        else:
+            pyautogui.click(pos_1, pos_2)
+    except Exception as e:
+        print(f"click_pos_abs Error: {e}")
 
 def hold_move_and_attack(move_key: str = "A", hold_ms: int = 140, attack_key: str = "r", attack_count: int = 1):
     """

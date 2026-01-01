@@ -185,22 +185,19 @@ class MyApp(QDialog):
     def closeEvent(self, event):
         try:
             import keyboard
-            from function_game import arduino_panic, _SYNC_SER
+            from function_game import arduino_panic, _SHARED_SER
 
-            # 1. 키보드 감시(Hook) 즉시 해제
             keyboard.unhook_all()
 
-            # 2. 열려있는 시리얼 포트 강제 종료
-            if _SYNC_SER and _SYNC_SER.is_open:
-                _SYNC_SER.close()
+            # 공유 포트 닫기
+            if _SHARED_SER and _SHARED_SER.is_open:
+                _SHARED_SER.close()
 
-            # 3. 아두이노 모든 입력 초기화 (무한 입력 방지)
             arduino_panic()
-            print("프로그램이 안전하게 종료되었습니다.")
-        except Exception as e:
-            print(f"종료 처리 중 오류: {e}")
-
-        event.accept()  # 창 닫기 승인
+            print("프로그램 종료 및 리소스 해제 완료")
+        except:
+            pass
+        event.accept()
 
     def my_title(self):
         self.setWindowTitle(v_.this_game + "(ver " + version + ")")
@@ -3652,27 +3649,30 @@ class FirstTab(QWidget):
 
     def toggle_key_sync(self):
         import keyboard
-        from function_game import _SYNC_SER
-        if not self.is_sync_mode:
-            self.is_sync_mode = True
-            self.btn_sync_move.setText("동기화 중 (WASF)")
-            self.btn_sync_move.setStyleSheet("background-color: #4CAF50; color: white;")
-            keyboard.hook(self.on_key_event, suppress=True)
-        else:
-            self.is_sync_mode = False
-            keyboard.unhook(self.on_key_event)
-            self.btn_sync_move.setText("이동키 동기화 시작")
-            self.btn_sync_move.setStyleSheet("")
+        try:
+            if not self.is_sync_mode:
+                self.is_sync_mode = True
+                self.btn_sync_move.setText("동기화 중 (WASF)")
+                self.btn_sync_move.setStyleSheet("background-color: #4CAF50; color: white;")
 
-            # 동기화 종료 시 포트 닫기 및 키 해제
-            for key in self.target_keys:
-                arduino_key_up(key)
+                # suppress=True: 윈도우(소프트웨어) 입력을 차단하고 아두이노로만 전달
+                keyboard.hook(self.on_key_event, suppress=True)
+                print("실시간 키 동기화 시작 (소프트웨어 입력 차단)")
+            else:
+                self.is_sync_mode = False
+                # ValueError 방지: 안전하게 모든 후킹 해제
+                keyboard.unhook_all()
 
-            global _SYNC_SER
-            if _SYNC_SER:
-                _SYNC_SER.close()
-                _SYNC_SER = None
-            self.pressed_keys.clear()
+                self.btn_sync_move.setText("이동키 동기화 시작")
+                self.btn_sync_move.setStyleSheet("")
+
+                # 모든 키 해제
+                for key in self.target_keys:
+                    arduino_key_up(key)
+                self.pressed_keys.clear()
+                print("실시간 키 동기화 중지")
+        except Exception as e:
+            print(f"toggle_key_sync Error: {e}")
 
     def on_key_event(self, event):
         """키보드 이벤트를 분석하여 아두이노에 전달 (중복 이벤트 필터링)"""
