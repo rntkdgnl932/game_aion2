@@ -761,7 +761,7 @@ class FirstTab(QWidget):
         # --- 실시간 키 동기화 관련 변수 ---
         self.is_sync_mode = False  # 동기화 모드 On/Off
         self.pressed_keys = set()  # 현재 눌려있는 키 목록 (중복 전송 방지용)
-        self.target_keys = ['w', 'a', 's', 'd', 'f'] # 감시할 대상 키
+        self.target_keys = ['w', 'a', 's', 'd', 'f', 'b'] # 감시할 대상 키
 
         self.initUI()
         self.set_rand_int()
