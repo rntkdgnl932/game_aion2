@@ -761,7 +761,7 @@ class FirstTab(QWidget):
         # --- 실시간 키 동기화 관련 변수 ---
         self.is_sync_mode = False  # 동기화 모드 On/Off
         self.pressed_keys = set()  # 현재 눌려있는 키 목록 (중복 전송 방지용)
-        self.target_keys = ['w', 'a', 's', 'f']  # 감시할 대상 키
+        self.target_keys = ['w', 'a', 's', 'd', 'f'] # 감시할 대상 키
 
         self.initUI()
         self.set_rand_int()
@@ -3655,33 +3655,28 @@ class FirstTab(QWidget):
         import keyboard
         if not self.is_sync_mode:
             self.is_sync_mode = True
-            self.btn_sync_move.setText("동기화 중 (WASF)")
+            self.btn_sync_move.setText("동기화 중")
             self.btn_sync_move.setStyleSheet("background-color: #4CAF50; color: white;")
 
-            # 테스트를 위해 처음에는 suppress=False로 시작해 보세요.
-            # 메모장에 글자가 써지는데 아두이노는 안 움직인다면 아두이노의 수신 로직 문제일 수 있습니다.
+            # suppress=False: 게임의 금지 표시(안티치트)를 피하기 위해 로컬 입력을 허용합니다.
             keyboard.hook(self.on_key_event, suppress=False)
-            print("실시간 키 동기화 시작")
+            print("동기화 시작 ('d' 키 포함)")
         else:
             self.is_sync_mode = False
-            keyboard.unhook_all()  # ValueError 방지를 위해 전체 해제
-            self.btn_sync_move.setText("이동키 동기화 시작")
+            keyboard.unhook_all()
+            self.btn_sync_move.setText("동기화 시작")
             self.btn_sync_move.setStyleSheet("")
-            arduino_panic()  # 중지 시 모든 키 해제
+            arduino_panic()
             self.pressed_keys.clear()
-            print("실시간 키 동기화 중지")
 
     def on_key_event(self, event):
-        """키보드 이벤트를 분석하여 아두이노에 전달 (중복 필터링)"""
         key_name = event.name.lower()
         if key_name in self.target_keys:
             if event.event_type == 'down':
-                # 키를 처음 누를 때만 명령 전송
                 if key_name not in self.pressed_keys:
                     self.pressed_keys.add(key_name)
                     arduino_key_down(key_name)
             elif event.event_type == 'up':
-                # 키를 뗄 때만 명령 전송
                 if key_name in self.pressed_keys:
                     self.pressed_keys.discard(key_name)
                     arduino_key_up(key_name)

@@ -2554,48 +2554,38 @@ def get_sync_ser():
     return _SYNC_SER
 
 
-# 파일 최상단 또는 전역 변수 영역에 추가
+# 파일 최상단 전역 변수 영역
 _SHARED_SER = None
 
 def get_arduino_ser():
-    """모든 함수가 공유하는 단일 시리얼 객체 반환"""
     global _SHARED_SER
     import serial
-    import variable as v_
     if _SHARED_SER is None or not _SHARED_SER.is_open:
         try:
-            # v_.COM_과 v_.speed_가 로그상 'COM3', '9600'인지 다시 확인하세요.
+            # 보드레이트를 115200으로 높이면 반응 속도가 훨씬 빨라집니다 (아두이노 코드와 일치 필요)
             _SHARED_SER = serial.Serial(v_.COM_, v_.speed_, timeout=0.01)
-            time.sleep(1.0) # 아두이노가 연결 직후 리셋되는 시간을 충분히 줍니다.
-            print(f"시스템: 아두이노 연결 성공 ({v_.COM_})")
+            time.sleep(1.0)
         except Exception as e:
-            print(f"시리얼 연결 실패: {e}")
+            print(f"연결 실패: {e}")
             return None
     return _SHARED_SER
 
 def send_arduino_cmd(cmd):
-    """공유 포트를 통해 아두이노로 명령 전송"""
     ser = get_arduino_ser()
     if ser:
         try:
-            # 명령어 끝에 개행문자(\n)가 반드시 있어야 아두이노가 인식합니다.
-            full_cmd = f"{cmd}\n"
-            ser.write(full_cmd.encode())
-            # print(f"전송 완료: {cmd}") # 디버깅용 (정상 작동 확인 시 주석 처리)
+            ser.write(f"{cmd}\n".encode())
         except Exception as e:
-            print(f"명령 전송 실패: {e}")
-            global _SHARED_SER
-            _SHARED_SER = None # 에러 발생 시 초기화하여 재연결 유도
-
-# --- 키보드 동기화용 함수 ---
+            print(f"전송 에러: {e}")
 
 def arduino_key_down(key):
-    """아두이노에 키 누름 유지 명령"""
     send_arduino_cmd(f"KD {key.upper()}")
 
 def arduino_key_up(key):
-    """아두이노에 키 뗌 명령"""
     send_arduino_cmd(f"KU {key.upper()}")
+
+def arduino_panic():
+    send_arduino_cmd("PANIC")
 
 def arduino_panic():
     """모든 키/마우스 입력 강제 해제"""
