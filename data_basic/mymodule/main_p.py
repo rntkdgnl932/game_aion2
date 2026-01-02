@@ -1450,67 +1450,96 @@ class FirstTab(QWidget):
         vbox.addLayout(hbox2)
         self.setLayout(vbox)
 
-
-
     def moonlight_stop_perfect(self):
+        """완전정지 버튼 클릭 시 아두이노와 키보드 후킹을 모두 해제하고 종료합니다."""
         try:
-
             self.perfect_pause.setText("정지 중")
             self.perfect_pause.setStyleSheet("color:black; background:blue")
             self.perfect_pause.setDisabled(True)
-            QTest.qWait(1000)
+            QTest.qWait(500)
+
+            # --- [추가] 아두이노 및 시스템 자원 해제 로직 ---
+            import keyboard
+            from function_game import arduino_panic, _SHARED_SER
+
+            # 1. 모든 키보드 후킹(동기화 등) 즉시 해제
+            keyboard.unhook_all()
+
+            # 2. 아두이노에 눌려있는 모든 키(D키 등) 해제 명령 전송
+            arduino_panic()
+
+            # 3. 열려있는 시리얼 포트(COM3) 강제 종료 (액세스 거부 예방)
+            if _SHARED_SER and _SHARED_SER.is_open:
+                _SHARED_SER.close()
+                print("시스템: COM 포트 점유를 해제했습니다.")
+            # ----------------------------------------------
 
             print("game_Playing(self): " + str(v_.game_folder) + "_stop")
             dir_path = "C:\\my_games\\load\\" + str(v_.game_folder)
             file_path = dir_path + "\\start.txt"
-            # cla.txt
+
+            # cla.txt 설정
             cla_data = str(v_.now_cla) + "cla"
             file_path2 = dir_path + "\\" + cla_data + ".txt"
+
             with open(file_path, "w", encoding='utf-8-sig') as file:
-                data = 'no'
-                file.write(str(data))
-                time.sleep(0.2)
+                file.write('no')
+                time.sleep(0.1)
             with open(file_path2, "w", encoding='utf-8-sig') as file:
-                data = v_.now_cla
-                file.write(str(data))
-                time.sleep(0.2)
+                file.write(v_.now_cla)
+                time.sleep(0.1)
+
+            print("시스템: 모든 입력을 해제하고 프로그램을 재시작합니다.")
             os.execl(sys.executable, sys.executable, *sys.argv)
+
         except Exception as e:
-            print(e)
+            print(f"완전정지 실행 중 오류: {e}")
             return 0
 
-
-
     def again_restart_game(self):
-        # change_ready_main = False
-        # change_ready_step = False
+        """업데이트 버튼 클릭 시 아두이노 명령을 해제하고 안전하게 재시작합니다."""
+        try:
+            self.again_restart.setText("업뎃 중")
+            self.again_restart.setStyleSheet("color:black; background:blue")
+            self.again_restart.setDisabled(True)
+            QTest.qWait(500)
 
-        self.again_restart.setText("업뎃 중")
-        self.again_restart.setStyleSheet("color:black; background:blue")
-        self.again_restart.setDisabled(True)
-        QTest.qWait(1000)
+            # --- [추가] 아두이노 및 시스템 자원 해제 로직 ---
+            import keyboard
+            from function_game import arduino_panic, _SHARED_SER
 
-        print("업데이트 후 재시작")
-        # git pull 실행 부분
-        # git_dir = '{https://github.com/rntkdgnl932/ncs.git}'
-        # g = git.cmd.Git(git_dir)
-        # g.pull()
-        # Repo('여기 비워진것은 현재 실행되는 창의 위치란 뜻...현재 실행되는 창의 위치 기준...상대경로임...')
-        dir_path = "C:\\my_games\\load\\" + str(v_.game_folder)
-        file_path = dir_path + "\\start.txt"
-        with open(file_path, "w", encoding='utf-8-sig') as file:
-            data = 'no'
-            file.write(str(data))
+            # 1. 키보드 동기화 및 핫키 감시 즉시 중단
+            keyboard.unhook_all()
 
-        my_repo = git.Repo()
-        my_repo.remotes.origin.pull()
-        time.sleep(1)
-        # 실행 후 재시작 부분
-        os.execl(sys.executable, sys.executable, *sys.argv)
+            # 2. 아두이노에 눌려있는 모든 키(d, w, s, a 등) 즉시 해제
+            arduino_panic()
 
-        # self.game.isCheck = True
-        # self.game.start()
-        # self.again_restart_background()
+            # 3. 시리얼 포트(COM3) 연결 강제 종료
+            if _SHARED_SER and _SHARED_SER.is_open:
+                _SHARED_SER.close()
+                print("시스템: 업데이트 전 시리얼 포트 해제 완료")
+            # ----------------------------------------------
+
+            print("업데이트 후 재시작")
+            dir_path = "C:\\my_games\\load\\" + str(v_.game_folder)
+            file_path = dir_path + "\\start.txt"
+            with open(file_path, "w", encoding='utf-8-sig') as file:
+                file.write('no')
+
+            # Git 업데이트 실행
+            my_repo = git.Repo()
+            my_repo.remotes.origin.pull()
+            time.sleep(1)
+
+            print("시스템: 모든 입력을 해제하고 업데이트를 완료했습니다. 프로그램을 재시작합니다.")
+            os.execl(sys.executable, sys.executable, *sys.argv)
+
+        except Exception as e:
+            print(f"업데이트 중 오류 발생: {e}")
+            # 오류 발생 시 버튼 복구
+            self.again_restart.setText("업데이트")
+            self.again_restart.setStyleSheet("")
+            self.again_restart.setDisabled(False)
 
     def again_restart_background(self):
 

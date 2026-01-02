@@ -4,6 +4,7 @@ import time
 import requests
 from PyQt5.QtTest import *
 import variable as v_
+import random
 
 sys.path.append('C:/my_games/' + str(v_.game_folder) + '/' + str(v_.data_folder) + '/mymodule')
 
@@ -204,20 +205,32 @@ def jadong_test(cla):
                     print("no target_1", auto_count)
 
                     # 타겟 탐색(10회 시도)
+                    # 타겟 탐색 시작
                     found = False
-                    for _ in range(10):
-                        # 다시 타겟 확인
+                    for search_idx in range(10):  # 10회 시도
+                        # 1. 다시 타겟 확인
                         img_array = np.fromfile(full_path, np.uint8)
                         img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
                         target = fg.imgs_set_(700, 30, 1500, 200, cla, img, 0.8)
+
                         if target:
                             found = True
                             break
 
+                        # 2. 타겟이 안 잡히면 TAB 실행
                         fg.arduino_press("TAB")
-                        # '사람처럼 보이기' 스텝(왕복으로 제자리 복귀)
+                        QTest.qWait(300)
+
+                        # 3. [추가 로직] 3번째, 7번째 실패 시 'S'를 길게 눌러 뒤로 퇴각 (시야 확보)
+                        if search_idx in [2, 6]:
+                            print(f"시야 확보를 위해 뒤로 퇴각 (Attempt {search_idx + 1})")
+                            # S키를 600~900ms 동안 길게 누름 (사거리 확보 및 쏠림 방지)
+                            fg.hold_key_ms("S", random.randint(600, 900))
+                            QTest.qWait(500)
+
+                        # 4. 기본 짧은 스텝 실행
                         stepper.maybe_step()
-                        QTest.qWait(1000)
+                        QTest.qWait(2000)
 
                     if found:
                         print("target_found_after_tab", target)
