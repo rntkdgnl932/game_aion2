@@ -37,8 +37,8 @@ def go_test():
     elif cla == "six":
         plus = 960 * 5
 
-    skip_click(cla)
-    # jadong_start(cla)
+    # skip_click(cla)
+    jadong_start(cla)
 
 def go_test_ex():
     import numpy as np
