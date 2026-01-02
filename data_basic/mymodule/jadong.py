@@ -71,6 +71,7 @@ def jadong_test(cla):
 
         auto = True
         auto_count = 0
+        bag_clean_up_count = 0
 
         # 전투 카운터(타겟 "신규 획득" 기준)
         combat_count = 0
@@ -161,11 +162,7 @@ def jadong_test(cla):
                         fg.arduino_press("8")
                         QTest.qWait(90)
 
-                    # 500번 전투마다 bag_clean_up 1회
-                    if fight_count % bag_clean_up == 0:
-                        print("bag_clean_up", fight_count)
-                        bag_clean_up_start(cla)
-                        QTest.qWait(90)
+
 
                     # 타겟 "신규 획득" 감지
                     if not in_combat:
@@ -197,12 +194,21 @@ def jadong_test(cla):
                         QTest.qWait(80)
 
                 else:
+
+                    bag_clean_up_count += 1
+
                     if in_combat:
                         # 타겟이 끊긴 순간을 전투 종료로 봄
                         in_combat = False
                         t_used_this_combat = False
 
                     print("no target_1", auto_count)
+
+                    # 500번 전투마다 bag_clean_up 1회
+                    if bag_clean_up_count % bag_clean_up == 0:
+                        print("bag_clean_up", bag_clean_up_count)
+                        bag_clean_up_start(cla)
+                        QTest.qWait(90)
 
                     # 타겟 탐색(10회 시도)
                     # 타겟 탐색 시작
