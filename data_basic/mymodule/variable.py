@@ -45,3 +45,25 @@ onCollection = False
 mouse_speed = 20
 mouse_pm = 3
 mouse_move_count = 300
+
+# 리스트 관련
+
+import os
+
+close_list = "c:\\my_games\\game_aion2\\data_basic\\imgs\\clean_screen\\close\\"
+close_files = [
+    f for f in os.listdir(close_list)
+    if os.path.isfile(os.path.join(close_list, f))
+]
+
+skip_list = "c:\\my_games\\game_aion2\\data_basic\\imgs\\clean_screen\\skip\\"
+skip_files = [
+    f for f in os.listdir(skip_list)
+    if os.path.isfile(os.path.join(skip_list, f))
+]
+
+confirm_list = "c:\\my_games\\game_aion2\\data_basic\\imgs\\action\\confirm_all\\"
+confirm_files = [
+    f for f in os.listdir(confirm_list)
+    if os.path.isfile(os.path.join(confirm_list, f))
+]

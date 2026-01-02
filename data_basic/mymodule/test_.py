@@ -10,11 +10,14 @@ sys.path.append('C:/my_games/' + str(v_.game_folder) + '/' + str(v_.data_folder)
 import function_game as fg
 import traceback
 from function_game import click_pos_reg, imgs_set_, click_pos_2
+from clean_screen import clean_screen_start, skip_click
+from action import bag_clean_up_start
 
 def go_test():
     import numpy as np
     import cv2
     from jadong import jadong_start
+    from function_game import imgs_set_for
     print("test")
     cla = "one"
 
@@ -34,7 +37,8 @@ def go_test():
     elif cla == "six":
         plus = 960 * 5
 
-    jadong_start(cla)
+    skip_click(cla)
+    # jadong_start(cla)
 
 def go_test_ex():
     import numpy as np

@@ -27,6 +27,7 @@ def jadong_test(cla):
     import numpy as np
     import cv2
     from function_game import imgs_set_, click_pos_reg
+    from action import bag_clean_up_start
     print("test")
     cla = "one"
 
@@ -85,6 +86,8 @@ def jadong_test(cla):
 
         skill7_every = 5
         skill8_every = 10
+
+        bag_clean_up = 500
 
         try:
 
@@ -155,6 +158,12 @@ def jadong_test(cla):
                     if fight_count % skill8_every == 0:
                         print("skill_8", fight_count)
                         fg.arduino_press("8")
+                        QTest.qWait(90)
+
+                    # 500번 전투마다 bag_clean_up 1회
+                    if fight_count % bag_clean_up == 0:
+                        print("bag_clean_up", fight_count)
+                        bag_clean_up_start(cla)
                         QTest.qWait(90)
 
                     # 타겟 "신규 획득" 감지

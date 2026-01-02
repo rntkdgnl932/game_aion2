@@ -504,17 +504,19 @@ def imgs_set_for(a, b, c, d, cla, img, data):
             plus = 960 * 4
         if cla == 'six':
             plus = 960 * 5
+        try:
+            regs = []
 
-        regs = []
+            for i in pyautogui.locateAllOnScreen(img, region=(a + plus, b, c - a, d - b), confidence=data):
+                print('i', i)
+                last_x = i.left + int(i.width / 2)
+                last_y = i.top + int(i.height / 2)
+                last = [last_x, last_y]
+                regs.append(last)
 
-        for i in pyautogui.locateAllOnScreen(img, region=(a + plus, b, c - a, d - b), confidence=data):
-            print('i', i)
-            last_x = i.left + int(i.width / 2)
-            last_y = i.top + int(i.height / 2)
-            last = [last_x, last_y]
-            regs.append(last)
-
-        return regs
+            return regs
+        except Exception:
+            return None
     except ValueError:
         return False
 
