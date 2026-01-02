@@ -221,11 +221,11 @@ def jadong_test(cla):
                         fg.arduino_press("TAB")
                         QTest.qWait(300)
 
-                        # 3. [추가 로직] 3번째, 7번째 실패 시 'S'를 길게 눌러 뒤로 퇴각 (시야 확보)
-                        if search_idx in [2, 6]:
+                        # 3. [추가 로직] 2번째, 4번째... 실패 시 'S'를 길게 눌러 뒤로 퇴각 (시야 확보)
+                        if search_idx in [1, 3, 5, 7, 9]:
                             print(f"시야 확보를 위해 뒤로 퇴각 (Attempt {search_idx + 1})")
                             # S키를 600~900ms 동안 길게 누름 (사거리 확보 및 쏠림 방지)
-                            fg.hold_key_ms("S", random.randint(600, 900))
+                            fg.hold_key_ms("S", random.randint(3000, 5000))
                             QTest.qWait(500)
 
                         # 4. 기본 짧은 스텝 실행

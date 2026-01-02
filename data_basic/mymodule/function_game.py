@@ -2471,8 +2471,19 @@ def arduino_key_up(key):
     send_arduino_cmd(f"KU {key.upper()}")
 
 def arduino_panic():
-    """모든 키/마우스 입력 강제 해제"""
+    """모든 키/마우스 입력 강제 해제 (더 강력한 버전)"""
+    # 1. 자주 사용하는 키들을 명시적으로 해제 명령 전송
+    target_keys = ['w', 'a', 's', 'd', 'f', 'b', 'TAB', 'r', 'q', 'e', 'T', '`', '7', '8']
+    for key in target_keys:
+        send_arduino_cmd(f"KU {key}")
+
+    # 2. 마우스 버튼 해제 (Z=4: 좌클릭Up, Z=6: 우클릭Up)
+    send_arduino_cmd("x = 0, y = 0, z = 4")
+    send_arduino_cmd("x = 0, y = 0, z = 6")
+
+    # 3. 마지막으로 아두이노 자체 패닉 명령어 전송
     send_arduino_cmd("PANIC")
+    print("시스템: 아두이노 모든 입력 강제 해제 완료")
 
 def click_pos_abs(pos_1, pos_2, click):
     """공유 시리얼을 사용하여 절대 좌표 클릭"""
