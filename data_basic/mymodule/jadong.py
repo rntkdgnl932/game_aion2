@@ -230,7 +230,7 @@ def jadong_test(cla):
                         # 3. [추가 로직] 2번째, 4번째... 실패 시 'S'를 길게 눌러 뒤로 퇴각 (시야 확보)
                         if search_idx in [1, 3, 5, 7, 9]:
                             print(f"시야 확보를 위해 4초 뒤에 뒤로 퇴각 (Attempt {search_idx + 1})")
-                            QTest.qWait(40000)
+                            QTest.qWait(4000)
                             # S키를 600~900ms 동안 길게 누름 (사거리 확보 및 쏠림 방지)
                             fg.hold_key_ms("S", random.randint(3000, 5000))
                             QTest.qWait(500)
