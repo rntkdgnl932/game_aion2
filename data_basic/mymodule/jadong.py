@@ -89,7 +89,7 @@ def jadong_test(cla):
         skill7_every = 5
         skill8_every = 10
 
-        bag_clean_up = 500
+        bag_clean_up = 300
 
         try:
 
@@ -204,7 +204,8 @@ def jadong_test(cla):
 
                     print("no target_1", auto_count)
 
-                    # 500번 전투마다 bag_clean_up 1회
+                    # 300번 전투마다 bag_clean_up 1회
+                    print("bag_clean_up", bag_clean_up_count)
                     if bag_clean_up_count % bag_clean_up == 0:
                         print("bag_clean_up", bag_clean_up_count)
                         bag_clean_up_start(cla)
@@ -228,7 +229,7 @@ def jadong_test(cla):
                         QTest.qWait(300)
 
                         # 3. [추가 로직] 2번째, 4번째... 실패 시 'S'를 길게 눌러 뒤로 퇴각 (시야 확보)
-                        if search_idx in [1, 3, 5, 7, 9]:
+                        if search_idx in [3, 7, 9]:
                             print(f"시야 확보를 위해 4초 뒤에 뒤로 퇴각 (Attempt {search_idx + 1})")
                             QTest.qWait(4000)
                             # S키를 600~900ms 동안 길게 누름 (사거리 확보 및 쏠림 방지)

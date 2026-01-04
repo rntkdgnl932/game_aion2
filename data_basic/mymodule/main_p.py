@@ -855,7 +855,7 @@ class FirstTab(QWidget):
         self.btn_mouse_manual.clicked.connect(self.mouse_click_action)
 
         self.edit_hotkey1 = QLineEdit(self)
-        self.edit_hotkey1.setText("`")
+        self.edit_hotkey1.setText("[")
         self.edit_hotkey1.setFixedWidth(45)
 
         self.edit_hotkey2 = QLineEdit(self)
@@ -863,7 +863,7 @@ class FirstTab(QWidget):
         self.edit_hotkey2.setFixedWidth(45)
 
         self.edit_hotkey3 = QLineEdit(self)
-        self.edit_hotkey3.setText("b")
+        self.edit_hotkey3.setText("]")
         self.edit_hotkey3.setFixedWidth(45)
 
         self.btn_hotkey_start = QPushButton("핫키 감시 시작")
